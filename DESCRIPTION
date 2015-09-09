@@ -1,0 +1,10 @@
+Package: ReplicatedPointPatterns
+Type: Package
+Title: Analysis of replicated point patterns with covariates
+Imports: spatstat, nlme, abind, parallel
+Version: 0.2.0
+Date: 2015-9-9
+Author: Robert Bagchi
+Maintainer: Robert Bagchi <robert.bagchi@uconn.edu>
+Description: Replicated point patterns are obtained in many lines of research. The object of this package is to help analyse these data and link variation among the second-order structure of point patterns to covariates. Functions are available for fitting both linear models and mixed-effects models. 
+License: GPL-2

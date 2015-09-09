@@ -1,0 +1,6 @@
+import(spatstat)
+import(nlme)
+import(abind)
+import(parallel)
+exportPattern("^[[:alpha:]]+")
+
