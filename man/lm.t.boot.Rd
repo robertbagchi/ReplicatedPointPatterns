@@ -1,7 +1,6 @@
 \name{lm.t.boot}
 \alias{lm.t.boot}
 \alias{lm.boot}
-
 \title{
   calculate t-distribution based confidence intervals for an kfunclm object
 }
