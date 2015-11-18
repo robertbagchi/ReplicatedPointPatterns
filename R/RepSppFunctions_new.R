@@ -1,7 +1,7 @@
 ########################################################################
 ## File name: RepSPPFunctions_new.R
 ## Author: Robert Bagchi (bagchi.r@gmail.com)
-## Last modified 26/09/2014 by R Bagchi
+## Last modified 18/11/2014 by R Bagchi
 ## Description Functions for replicated spatial point pattern analysis
 ##             including both fixed and random effects and functions for
 ##             predictions and bootstrapped confidence intervals.
@@ -920,9 +920,9 @@ bootstrap.compare.lme <- function(mods, term, dists, nboot, ncore){
       k.data.frame <- getData(mod)
       mod0 <- try(update(mod, paste('~.-', term),
                          correlation=mod$modelStruct$corStruct), silent=TRUE)
-      if(class(mod)=='try-error'){
+      if(class(mod0)=='try-error'){
         warning("Null model fit did not converge at some distances")
-        mod <- NULL
+        mod0 <- NULL
       }
     }
     else mod0 <- NULL
