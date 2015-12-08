@@ -705,7 +705,7 @@ refit.lmek <- function(mod, res.r){
 ## Function to perform the bootstrapping on lme models and get out
 ## confidence intervals.
 ################################################################################
-bootstrap.parallel.lme <- function(mods, resids, lin.comb.Ct, nboot, ncore=1)
+bootstrap.parallel.lme <- function(mods, resids, lin.comb.Ct, nboot, ncore=1, cltype='SOCK')
 {
   ## mod is the list of models
   ##lin.comb.Ct is the linear combintaion of the fixed parameters
@@ -714,7 +714,7 @@ bootstrap.parallel.lme <- function(mods, resids, lin.comb.Ct, nboot, ncore=1)
   ## resids are the homogenised and variance corrected residuals and ranefs
   ###require(parallel) ## load the parallel package if needed
   
-  cl <- makeCluster(ncore, type='SOCK') ## make connections
+  cl <- makeCluster(ncore, type=cltype) ## make connections
   on.exit({stopCluster(cl); print('clusters closed on exit')}) ## close connectons on
                                         # exit of function
   ## export all the functions and objects to the clusters
@@ -784,7 +784,7 @@ getpars <- function(mod, lin.comb.Ct) {
 ## A function that wraps up the bootstrap function and returns the confidence
 ## intervals for the predictions and paramters
 ################################################################################
-bootstrap.t.CI.lme <- function(mods, lin.comb.Ct, nboot, alpha, ncore=1,
+bootstrap.t.CI.lme <- function(mods, lin.comb.Ct, nboot, alpha, ncore=1, cltype='SOCK',
                                transform=NULL)
 {
   ##make sure we have the necessary packages
@@ -803,7 +803,7 @@ bootstrap.t.CI.lme <- function(mods, lin.comb.Ct, nboot, alpha, ncore=1,
     ##parameter estimates of interest and their standard errors
   boot.esti <- bootstrap.parallel.lme(mods=mods, resids=resids,
                                       lin.comb.Ct=lin.comb.Ct,
-                                      nboot=nboot, ncore=ncore)
+                                      nboot=nboot, ncore=ncore, cltype=cltype)
   
   ## Pull out the parameter estimates and predictions with SEs for fitted model
   sample.esti <- sapply(mods, getpars, lin.comb.Ct=lin.comb.Ct, simplify=FALSE)
@@ -891,7 +891,7 @@ compare.mods.bootstrap <- function(modH0, modH1, res.r){
 ## Function that works as a wrapper to compare two models using
 ## bootstrapping and provides test statistics
 #######################################################################
-bootstrap.compare.lme <- function(mods, term, dists, nboot, ncore){
+bootstrap.compare.lme <- function(mods, term, dists, nboot, ncore, cltype='SOCK'){
   ###require(parallel)
   ###require(abind)
 
@@ -939,7 +939,7 @@ bootstrap.compare.lme <- function(mods, term, dists, nboot, ncore){
 
     ###require(parallel)
 
-    cl <- makeCluster(ncore, type='SOCK')
+    cl <- makeCluster(ncore, type=cltype)
   ## set up the random number streams to be independent on different cores
     RNGkind("L'Ecuyer-CMRG")
     clusterSetRNGStream(cl=cl, iseed=NULL)
