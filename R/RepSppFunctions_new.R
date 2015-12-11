@@ -894,10 +894,15 @@ compare.mods.bootstrap <- function(modH0, modH1, res.r){
 bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore, cltype='SOCK') 
 {
 
-    ## if (length(mods) < length(dists)) 
-    ##     stop("More test distances than modelled distances")
+    ## testdists <-  dist
+    
+    ## if(class(dists) == 'list'){
+    ##     dists <- unique(do.call('c', dists))
+    ##     dists[order[dists]]
+    ## } ## this is just a segment that will eventually lead to more efficient code.
+        
     if (!all(as.character(dists) %in% names(mods))) 
-        stop("More test distances than modelled distances")
+        stop("Some test distances have not been modelled")
     
     mods <- mods[as.character(dists)]
     
@@ -980,12 +985,14 @@ bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore, cltype='SOCK
     if (sum(goodsims) < nboot)
         warning(paste("Only ", sum(goodsims), "completed simulations - increase iterations?"))
     boot.stat <- boot.stat[goodsims][1:nboot]
-    
+
     D.obs <- sum(obs.stat[as.character(dists[!badmods])])
+
     D.boot <- sapply(boot.stat[!sapply(boot.stat, is.null)], 
                      function(x, d) {
-                         return(sum(x[d]))
-                     }, d = dists, simplify = TRUE)
+                         return(sum(x[as.character(d)]))
+                     }, d = dists[!badmods], simplify = TRUE)
+    
     p.val <- (sum(D.obs < D.boot) + 1)/(1 + length(D.boot))
     result <- list(D = D.obs, p = p.val, D.boot = D.boot, term = term, dists=dists[!badmods])
     class(result) <-  'kfunctionlmeanova'
