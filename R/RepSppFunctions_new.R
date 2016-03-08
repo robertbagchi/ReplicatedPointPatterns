@@ -705,7 +705,7 @@ refit.lmek <- function(mod, res.r){
 ## Function to perform the bootstrapping on lme models and get out
 ## confidence intervals.
 ################################################################################
-bootstrap.parallel.lme <- function(mods, resids, lin.comb.Ct, nboot, ncore=1, cltype='SOCK')
+bootstrap.parallel.lme <- function(mods, resids, lin.comb.Ct, nboot, ncore=1, cltype='PSOCK')
 {
   ## mod is the list of models
   ##lin.comb.Ct is the linear combintaion of the fixed parameters
@@ -784,7 +784,7 @@ getpars <- function(mod, lin.comb.Ct) {
 ## A function that wraps up the bootstrap function and returns the confidence
 ## intervals for the predictions and paramters
 ################################################################################
-bootstrap.t.CI.lme <- function(mods, lin.comb.Ct, nboot, alpha, ncore=1, cltype='SOCK',
+bootstrap.t.CI.lme <- function(mods, lin.comb.Ct, nboot, alpha, ncore=1, cltype='PSOCK',
                                transform=NULL)
 {
   ##make sure we have the necessary packages
@@ -891,7 +891,7 @@ compare.mods.bootstrap <- function(modH0, modH1, res.r){
 ## Function that works as a wrapper to compare two models using
 ## bootstrapping and provides test statistics
 #######################################################################
-bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore, cltype='SOCK') 
+bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore, cltype='PSOCK') 
 {
 
     ## testdists <-  dist
