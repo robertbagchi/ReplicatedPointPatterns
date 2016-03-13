@@ -790,7 +790,7 @@ getpars <- function(mod, lin.comb.Ct) {
 ## intervals for the predictions and paramters
 ################################################################################
 bootstrap.t.CI.lme <- function(mods, lin.comb.Ct, nboot, alpha, ncore=1, cltype='PSOCK',
-                               transform=NULL)
+                               iseed=NULL, transform=NULL)
 {
   ##make sure we have the necessary packages
   ###require('abind')
@@ -808,7 +808,8 @@ bootstrap.t.CI.lme <- function(mods, lin.comb.Ct, nboot, alpha, ncore=1, cltype=
     ##parameter estimates of interest and their standard errors
   boot.esti <- bootstrap.parallel.lme(mods=mods, resids=resids,
                                       lin.comb.Ct=lin.comb.Ct,
-                                      nboot=nboot, ncore=ncore, cltype=cltype)
+                                      nboot=nboot, ncore=ncore, cltype=cltype,
+                                      iseed=iseed)
   
   ## Pull out the parameter estimates and predictions with SEs for fitted model
   sample.esti <- sapply(mods, getpars, lin.comb.Ct=lin.comb.Ct, simplify=FALSE)
