@@ -705,7 +705,8 @@ refit.lmek <- function(mod, res.r){
 ## Function to perform the bootstrapping on lme models and get out
 ## confidence intervals.
 ################################################################################
-bootstrap.parallel.lme <- function(mods, resids, lin.comb.Ct, nboot, ncore=1, cltype='PSOCK')
+bootstrap.parallel.lme <- function(mods, resids, lin.comb.Ct, nboot,
+                                   ncore=1, cltype='PSOCK', iseed=NULL)
 {
   ## mod is the list of models
   ##lin.comb.Ct is the linear combintaion of the fixed parameters
@@ -714,8 +715,12 @@ bootstrap.parallel.lme <- function(mods, resids, lin.comb.Ct, nboot, ncore=1, cl
   ## resids are the homogenised and variance corrected residuals and ranefs
   ###require(parallel) ## load the parallel package if needed
   
-  cl <- makeCluster(ncore, type=cltype) ## make connections
-  on.exit({stopCluster(cl); print('clusters closed on exit')}) ## close connectons on
+    cl <- makeCluster(ncore, type=cltype) ## make connections
+    RNGkind("L'Ecuyer-CMRG")
+    clusterSetRNGStream(cl = cl, iseed = iseed)
+
+
+    on.exit({stopCluster(cl); print('clusters closed on exit')}) ## close connectons on
                                         # exit of function
   ## export all the functions and objects to the clusters
   clusterExport(cl, list('mods', 'resids', 'lin.comb.Ct', 'residual.randomise.lme',
@@ -891,7 +896,8 @@ compare.mods.bootstrap <- function(modH0, modH1, res.r){
 ## Function that works as a wrapper to compare two models using
 ## bootstrapping and provides test statistics
 #######################################################################
-bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore, cltype='PSOCK') 
+bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore,
+                                   cltype='PSOCK', iseed=NULL) 
 {
 
     ## testdists <-  dist
@@ -950,7 +956,7 @@ bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore, cltype='PSOC
     
     cl <- makeCluster(ncore, type = cltype)
     RNGkind("L'Ecuyer-CMRG")
-    clusterSetRNGStream(cl = cl, iseed = NULL)
+    clusterSetRNGStream(cl = cl, iseed = iseed)
     on.exit({
         stopCluster(cl)
         print("clusters closed on exit")
@@ -972,8 +978,8 @@ bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore, cltype='PSOC
             bootstrap.stat <- mapply(compare.mods.bootstrap, 
                                      modsH0, modsH1, resids.resamp)
             do.again <- any(sapply(bootstrap.stat, function(x) {
-                if (is.null(x)) return(FALSE) else return(class(x) == 
-                                                          "try-error")
+                if (is.null(x)) return(FALSE)
+                else return(class(x) == "try-error")
             }))
         }
         bootstrap.stat[sapply(bootstrap.stat, is.null)] <- NA
