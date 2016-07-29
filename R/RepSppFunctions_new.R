@@ -490,7 +490,7 @@ lmeHyperframe <- function(hyper, r , fixed, random, correlation =NULL,
     removed.species <- NULL
   
   ## Do not model distances where the variance is 0
-  dist.keep <-  (apply(sapply(hyper$K, function(K) K[[correction]]), 1,
+  dist.keep <-  (apply(sapply(hyper$K, function(K) K[[correction]][K$r %in% r]), 1,
                       function(x) var(x)) > 0)
   if(printwarnings)
     warning(paste('Not modelling K at distances ',
