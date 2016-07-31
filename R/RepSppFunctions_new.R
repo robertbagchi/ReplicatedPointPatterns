@@ -901,13 +901,13 @@ bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore,
                                    cltype='PSOCK', iseed=NULL) 
 {
 
-    ## testdists <-  dist
+    testdists <-  dists
     
-    ## if(class(dists) == 'list'){
-    ##     dists <- unique(do.call('c', dists))
-    ##     dists[order[dists]]
-    ## } ## this is just a segment that will eventually lead to more efficient code.
-        
+    if(class(dists) == 'list'){
+      dists <- unique(do.call('c', dists))
+      dists <- dists[order(dists)]
+    } ## this is just a segment that will eventually lead to more efficient code.
+    
     if (!all(as.character(dists) %in% names(mods))) 
         stop("Some test distances have not been modelled")
     
@@ -939,7 +939,7 @@ bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore,
         else mod0 <- NULL
         return(mod0)
     }, term = term)
-    
+
     ## remove models that didn't converge
     badmods <-  mapply(function(m0, m1) is.null(m0) | is.null(m1),
                        m0=modsH0, m1=modsH1)
@@ -990,24 +990,31 @@ bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore,
     goodsims <- sapply(boot.stat, function(x) all(is.numeric(x)))
     
     if (sum(goodsims) < nboot)
-        warning(paste("Only ", sum(goodsims), "completed simulations - increase iterations?"))
+        warning(paste("Only ", sum(goodsims), 
+                      "completed simulations - increase iterations?"))
     boot.stat <- boot.stat[goodsims][1:nboot]
 
-    D.obs <- sum(obs.stat[as.character(dists[!badmods])])
-
-    D.boot <- sapply(boot.stat[!sapply(boot.stat, is.null)], 
-                     function(x, d) {
+    Dstats <- lapply(testdists, function(d){
+      d <- d[!(d %in% names(badmods)[badmods])]
+      D.obs <-sum(obs.stat[as.character(d)])
+      D.boot <- sapply(boot.stat[!sapply(boot.stat, is.null)], 
+                       function(x, d) {as.character
                          return(sum(x[as.character(d)]))
-                     }, d = dists[!badmods], simplify = TRUE)
-    
-    p.val <- (sum(D.obs < D.boot) + 1)/(1 + length(D.boot))
-    result <- list(D = D.obs, p = p.val, D.boot = D.boot, term = term, dists=dists[!badmods])
+                       }, d = d, simplify = TRUE)
+      p.val <- (sum(D.obs < D.boot) + 1)/(1 + length(D.boot))
+      D = c(D=D.obs, p=p.val)
+      return(list(D = D, D.boot=D.boot, dists=d))
+    })
+
+    result <- list(D=Dstats, term = term)
     class(result) <-  'kfunctionlmeanova'
     return(result)
 }
 
 ## function to print kfunctionlmeanova object
 print.kfunctionlmeanova <- function(obj){
-    print(obj[c('D', 'p', 'term', 'dists')])
+  print(obj$term)
+  lapply(obj[["D"]], function(Dobj) 
+    print(Dobj[c("D", "dists")]))  
 }
           
