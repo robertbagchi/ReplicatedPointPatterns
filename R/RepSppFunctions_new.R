@@ -996,7 +996,7 @@ bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore,
     warning(paste("Only ", sum(goodsims), 
                   "completed simulations - increase iterations?"))
   boot.stat <- boot.stat[goodsims][1:nboot]
-  testdists <- list(1:5, 1:3)
+
   Dstats <- lapply(testdists,  Dcalc, 
                    obsD=obs.stat, bootD=boot.stat, rmmods=badmods)
 
