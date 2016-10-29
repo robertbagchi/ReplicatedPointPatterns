@@ -900,121 +900,149 @@ compare.mods.bootstrap <- function(modH0, modH1, res.r){
 bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore,
                                    cltype='PSOCK', iseed=NULL) 
 {
+  
+  testdists <-  dists
+  if(class(testdists) !='list')
+    testdists <- list(testdists)
+  
+  if(class(dists) == 'list'){
+    dists <- unique(do.call('c', dists))
+    dists <- dists[order(dists)]
+  } ## this is just a segment that will eventually lead to more efficient code.
+  
+  if (!all(as.character(dists) %in% names(mods))) 
+    stop("Some test distances have not been modelled")
+  
+  mods <- mods[as.character(dists)]
+  
+  modsH1 <- lapply(mods, function(mod) {
+    if (!is.null(mod)) {
+      k.data.frame <- getData(mod)
+      mod <- try(update(mod, method = "ML", correlation = mod$modelStruct$corStruct), 
+                 silent = TRUE)
+      if (class(mod) == "try-error") {
+        warning("ML full models  did not converge at some distances")
+        mod <- NULL
+      }
+    }
+    else mod <- NULL
+    return(mod)
+  })
+  
+  modsH0 <- lapply(modsH1, function(mod, term) {
+    if (!is.null(mod)) {
+      k.data.frame <- getData(mod)
+      mod0 <- try(update(mod, paste("~.-", term), correlation = mod$modelStruct$corStruct), 
+                  silent = TRUE)
+      if (class(mod0) == "try-error") {
+        warning("Null model fit did not converge at some distances")
+        mod0 <- NULL
+      }
+    }
+    else mod0 <- NULL
+    return(mod0)
+  }, term = term)
+  
+  ## remove models that didn't converge
+  badmods <-  mapply(function(m0, m1) is.null(m0) | is.null(m1),
+                     m0=modsH0, m1=modsH1)
+  if(any(badmods))
+    warning(paste('removed model for distances:', dists[badmods]))
+  
+  modsH0 <-  modsH0[!badmods]
+  modsH1 <- modsH1[!badmods]
+  
+  obs.stat <- mapply(function(mod, mod0) {
+    if (is.null(mod) | is.null(mod0)) 
+      return(NULL)
+    else (-2) * logLik(mod0) - (-2) * logLik(mod)
+  }, mod = modsH1, mod0 = modsH0)
+  
+  cl <- makeCluster(ncore, type = cltype)
+  RNGkind("L'Ecuyer-CMRG")
+  clusterSetRNGStream(cl = cl, iseed = iseed)
+  on.exit({
+    stopCluster(cl)
+    print("clusters closed on exit")
+  })
+  clusterEvalQ(cl, library(nlme))
+  clusterEvalQ(cl, library(ReplicatedPointPatterns))
+  
+  clusterExport(cl, list("modsH1", "modsH0"), ## "residual.homogenise.lme", 
+                ##"residual.randomise.lme", "compare.mods.bootstrap"),           
+                envir = environment())
+  
+  boot.stat <- parSapply(cl, 1:ceiling(nboot * 1.2), function(i, 
+                                                              modsH0, modsH1) {
+    resids.H1 <- lapply(modsH1, residual.homogenise.lme)
+    do.again <- TRUE
+    while (do.again) {
+      resids.resamp <- residual.randomise.lme(mods = modsH0, 
+                                              resids = resids.H1)
+      bootstrap.stat <- mapply(compare.mods.bootstrap, 
+                               modsH0, modsH1, resids.resamp)
+      do.again <- any(sapply(bootstrap.stat, function(x) {
+        if (is.null(x)) return(FALSE)
+        else return(class(x) == "try-error")
+      }))
+    }
+    bootstrap.stat[sapply(bootstrap.stat, is.null)] <- NA
+    return(bootstrap.stat)
+  }, modsH0 = modsH0, modsH1 = modsH1, simplify = FALSE)
+  
+  goodsims <- sapply(boot.stat, function(x) all(is.numeric(x)))
+  
+  if (sum(goodsims) < nboot)
+    warning(paste("Only ", sum(goodsims), 
+                  "completed simulations - increase iterations?"))
+  boot.stat <- boot.stat[goodsims][1:nboot]
+  testdists <- list(1:5, 1:3)
+  Dstats <- lapply(testdists,  Dcalc, 
+                   obsD=obs.stat, bootD=boot.stat, rmmods=badmods)
 
-    testdists <-  dists
-    
-    if(class(dists) == 'list'){
-      dists <- unique(do.call('c', dists))
-      dists <- dists[order(dists)]
-    } ## this is just a segment that will eventually lead to more efficient code.
-    
-    if (!all(as.character(dists) %in% names(mods))) 
-        stop("Some test distances have not been modelled")
-    
-    mods <- mods[as.character(dists)]
-    
-    modsH1 <- lapply(mods, function(mod) {
-        if (!is.null(mod)) {
-            k.data.frame <- getData(mod)
-            mod <- try(update(mod, method = "ML", correlation = mod$modelStruct$corStruct), 
-                       silent = TRUE)
-            if (class(mod) == "try-error") {
-                warning("ML full models  did not converge at some distances")
-                mod <- NULL
-            }
-        }
-        else mod <- NULL
-        return(mod)
-    })
-    modsH0 <- lapply(modsH1, function(mod, term) {
-        if (!is.null(mod)) {
-            k.data.frame <- getData(mod)
-            mod0 <- try(update(mod, paste("~.-", term), correlation = mod$modelStruct$corStruct), 
-                        silent = TRUE)
-            if (class(mod0) == "try-error") {
-                warning("Null model fit did not converge at some distances")
-                mod0 <- NULL
-            }
-        }
-        else mod0 <- NULL
-        return(mod0)
-    }, term = term)
-
-    ## remove models that didn't converge
-    badmods <-  mapply(function(m0, m1) is.null(m0) | is.null(m1),
-                       m0=modsH0, m1=modsH1)
-    if(any(badmods))
-        warning(paste('removed model for distances:', dists[badmods]))
-    
-    modsH0 <-  modsH0[!badmods]
-    modsH1 <- modsH1[!badmods]
-    
-    obs.stat <- mapply(function(mod, mod0) {
-        if (is.null(mod) | is.null(mod0)) 
-            return(NULL)
-        else (-2) * logLik(mod0) - (-2) * logLik(mod)
-    }, mod = modsH1, mod0 = modsH0)
-    
-    cl <- makeCluster(ncore, type = cltype)
-    RNGkind("L'Ecuyer-CMRG")
-    clusterSetRNGStream(cl = cl, iseed = iseed)
-    on.exit({
-        stopCluster(cl)
-        print("clusters closed on exit")
-    })
-    clusterEvalQ(cl, library(nlme))
-    clusterEvalQ(cl, library(ReplicatedPointPatterns))
-    
-    clusterExport(cl, list("modsH1", "modsH0"), ## "residual.homogenise.lme", 
-                  ##"residual.randomise.lme", "compare.mods.bootstrap"),           
-                  envir = environment())
-    
-    boot.stat <- parSapply(cl, 1:ceiling(nboot * 1.2), function(i, 
-                                                                modsH0, modsH1) {
-        resids.H1 <- lapply(modsH1, residual.homogenise.lme)
-        do.again <- TRUE
-        while (do.again) {
-            resids.resamp <- residual.randomise.lme(mods = modsH0, 
-                                                    resids = resids.H1)
-            bootstrap.stat <- mapply(compare.mods.bootstrap, 
-                                     modsH0, modsH1, resids.resamp)
-            do.again <- any(sapply(bootstrap.stat, function(x) {
-                if (is.null(x)) return(FALSE)
-                else return(class(x) == "try-error")
-            }))
-        }
-        bootstrap.stat[sapply(bootstrap.stat, is.null)] <- NA
-        return(bootstrap.stat)
-    }, modsH0 = modsH0, modsH1 = modsH1, simplify = FALSE)
-    
-    goodsims <- sapply(boot.stat, function(x) all(is.numeric(x)))
-    
-    if (sum(goodsims) < nboot)
-        warning(paste("Only ", sum(goodsims), 
-                      "completed simulations - increase iterations?"))
-    boot.stat <- boot.stat[goodsims][1:nboot]
-
-    Dstats <- lapply(testdists, function(d){
-      d <- d[!(d %in% names(badmods)[badmods])]
-      D.obs <-sum(obs.stat[as.character(d)])
-      D.boot <- sapply(boot.stat[!sapply(boot.stat, is.null)], 
-                       function(x, d) {as.character
-                         return(sum(x[as.character(d)]))
-                       }, d = d, simplify = TRUE)
-      p.val <- (sum(D.obs < D.boot) + 1)/(1 + length(D.boot))
-      D = c(D=D.obs, p=p.val)
-      return(list(D = D, D.boot=D.boot, dists=d))
-    })
-
-    result <- list(D=Dstats, term = term)
-    class(result) <-  'kfunctionlmeanova'
-    return(result)
+  Tstats <- lapply(testdists, Tcalc, 
+                   obsD=obs.stat, bootD=boot.stat, rmmods=badmods)
+  
+  result <- list(T=Tstats, D=Dstats, term = term)
+  class(result) <-  'kfunctionlmeanova'
+  return(result)
 }
+
+
 
 ## function to print kfunctionlmeanova object
 print.kfunctionlmeanova <- function(obj){
   print(obj$term)
   lapply(obj[["D"]], function(Dobj) 
-    print(Dobj[c("D", "dists")]))  
+      print(Dobj[c("D", "dists")]))
+  lapply(obj[["T"]], function(Tobj) 
+    print(Tobj[c("T", "dists")]))  
 }
-          
+
+Dcalc <- function(d, obsD, bootD, rmmods){
+  d <- d[!(d %in% names(rmmods)[rmmods])]
+  D.obs <-sum(obsD[as.character(d)])
+  D.boot <- sapply(bootD[!sapply(bootD, is.null)], 
+                   function(x, d) {as.character
+                     return(sum(x[as.character(d)]))
+                   }, d = d, simplify = TRUE)
+  p.val <- (sum(D.obs < D.boot) + 1)/(1 + length(D.boot))
+  D = c(D=D.obs, p=p.val)
+  return(list(D = D, D.boot=D.boot, dists=d))
+}
+
+Tcalc <- function(d, obsD, bootD, rmmods){
+  d <- d[!(d %in% names(rmmods)[rmmods])]
+  boot.mat <- do.call('rbind', bootD)  
+  boot.sd <- apply(boot.mat, 2, sd, na.rm=T)
+  obsD <- obsD/boot.sd
+  T.obs <-mean(obsD[as.character(d)])
+  bootD <- lapply(bootD[!sapply(bootD, is.null)],
+                  function(D, sdD) D/sdD, sdD=boot.sd) 
+  T.boot <- sapply(bootD, function(x, d) {
+                     return(mean(x[as.character(d)]))
+                   }, d = d, simplify = TRUE)
+  p.val <- (sum(T.obs < T.boot) + 1)/(1 + length(T.boot))
+  T = c(T=T.obs, p=p.val)
+  return(list(T = T, T.boot=T.boot, dists=d))
+}
