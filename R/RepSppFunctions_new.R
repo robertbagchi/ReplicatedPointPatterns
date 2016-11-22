@@ -276,7 +276,7 @@ lm.t.boot <- function(lmmods, lincomb, nsim, alpha, simple.method=TRUE){
    if(simple.method){
       cis <- abind(lapply(bsci, function(iter){
           do.call('cbind',lapply(iter, function(kd) kd$pred))}), along=3)
-      cis <- apply(cis, c(2, 1), quantile, c(alpha/2, 1-alpha/2))
+      cis <- apply(cis, c(2, 1), quantile, c(alpha/2, 1-alpha/2), na.rm=T)
       lower <-  cis[1,,]
       if(class(lower) != 'matrix') lower <- as.matrix(lower)
       lower.CI <- split(lower, row(lower))
@@ -825,7 +825,7 @@ bootstrap.t.CI.lme <- function(mods, lin.comb.Ct, nboot, alpha, ncore=1, cltype=
   
   ## pull ou the cis of the parameter estimates
   boot.fix.cis <- apply(do.call('abind', args=list(what=boot.pars, along=3)),
-                        c(2, 1), quantile, c(alpha/2, 1-alpha/2))
+                        c(2, 1), quantile, c(alpha/2, 1-alpha/2), na.rm=T)
 
   sample.fix.cis <- aperm(sapply(sample.esti, function(x) x$beta.r), c(2,1))
   sample.fix.cis <- array(sample.fix.cis, dim=c(1, dim(sample.fix.cis)))
@@ -1003,7 +1003,8 @@ bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore,
   Tstats <- lapply(testdists, Tcalc, 
                    obsD=obs.stat, bootD=boot.stat, rmmods=badmods)
   
-  result <- list(T=Tstats, D=Dstats, term = term)
+  result <- list(T=Tstats, D=Dstats, term = term, nsim=nboot, 
+                 sims=boot.stat)
   class(result) <-  'kfunctionlmeanova'
   return(result)
 }
@@ -1012,7 +1013,7 @@ bootstrap.compare.lme <- function (mods, term, dists, nboot, ncore,
 
 ## function to print kfunctionlmeanova object
 print.kfunctionlmeanova <- function(obj){
-  print(obj$term)
+  print(paste(obj$term, '( nsim = ', obj$nsim, ')'))
   lapply(obj[["D"]], function(Dobj) 
       print(Dobj[c("D", "dists")]))
   lapply(obj[["T"]], function(Tobj) 
