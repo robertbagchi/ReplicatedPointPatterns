@@ -1040,7 +1040,7 @@ Tcalc <- function(d, obsD, bootD, rmmods){
   obsD <- obsD/boot.mn
   T.obs <-mean(obsD[as.character(d)])
   bootD <- lapply(bootD[!sapply(bootD, is.null)],
-                  function(D, mnD) D/mnD, sdD=boot.mn) 
+                  function(D, mnD) D/mnD, mnD=boot.mn) 
   T.boot <- sapply(bootD, function(x, d) {
                      return(mean(x[as.character(d)]))
                    }, d = d, simplify = TRUE)
