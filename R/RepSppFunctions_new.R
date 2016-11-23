@@ -1036,10 +1036,11 @@ Tcalc <- function(d, obsD, bootD, rmmods){
   d <- d[!(d %in% names(rmmods)[rmmods])]
   boot.mat <- do.call('rbind', bootD)  
   boot.sd <- apply(boot.mat, 2, sd, na.rm=T)
-  obsD <- obsD/boot.sd
+  boot.mn <- apply(boot.mat, 2, mean, na.rm=T)
+  obsD <- obsD/boot.mn
   T.obs <-mean(obsD[as.character(d)])
   bootD <- lapply(bootD[!sapply(bootD, is.null)],
-                  function(D, sdD) D/sdD, sdD=boot.sd) 
+                  function(D, mnD) D/mnD, sdD=boot.mn) 
   T.boot <- sapply(bootD, function(x, d) {
                      return(mean(x[as.character(d)]))
                    }, d = d, simplify = TRUE)
