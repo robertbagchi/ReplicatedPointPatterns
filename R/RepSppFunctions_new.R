@@ -175,10 +175,13 @@ lmHyperframe <- function(hyper, r , form,  correction='border',
     else
       hyper <- constructHyperframe(hyper=hyper, r=r, correction=correction,
                           pppx='pppx', weights.type=weights.type)
-        
+
+
   ## find species that have sufficient individuals (define with minsamp)
   ## across the plot for analysis
-  if(!is.na(minsamp))
+    removed.species <- NULL
+
+    if(!is.na(minsamp))
     {
       sp.keep <-sapply(
                        with.hyperframe(hyper,
@@ -194,7 +197,7 @@ lmHyperframe <- function(hyper, r , form,  correction='border',
         warning(paste("Removed", length(removed.species),
                       "species with insufficient numbers"))
     }
-  
+    
   ## Do not model distances where the variance is 0
   dist.keep <-  (apply(sapply(hyper$K, function(K) K[[correction]]), 1,
                        function(x) var(x)) > 0)
