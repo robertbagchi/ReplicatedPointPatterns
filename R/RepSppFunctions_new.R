@@ -55,9 +55,9 @@ abundance.weights.calc <- function(pppx, pppy=NULL,
     wx <- wx*npoints(pppx)
   if(Acorr)
     if(!is.null(pppy))
-      wx <- wx/area.owin(pppy)
+      wx <- wx/area(pppy)
   else
-    wx <- wx/area.owin(pppx)
+    wx <- wx/area(pppx)
   
   return(wx)
 }
